@@ -7,7 +7,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from utils.helpers import load_websites_from_yaml
+from helpers import load_websites_from_yaml
 
 
 @pytest.mark.parametrize("url", load_websites_from_yaml())

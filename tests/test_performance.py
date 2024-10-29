@@ -1,7 +1,7 @@
 # test_performance.py
 import pytest
 import time
-from utils.helpers import load_websites_from_yaml, fetch_url
+from helpers import load_websites_from_yaml, fetch_url
 
 @pytest.mark.parametrize("url", load_websites_from_yaml())
 def test_performance(url):
