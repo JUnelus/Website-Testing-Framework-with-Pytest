@@ -1,15 +1,16 @@
-# helpers.py
+import os
 import yaml
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 
-def load_websites_from_yaml(file_path=r'C:\Users\big_j\PycharmProjects\Website-Testing-Framework-with-Pytest\websites.yaml'):
-    """Loads website URLs from the YAML file."""
+def load_websites_from_yaml():
+    # Construct a relative path to websites.yaml
+    file_path = os.path.join(os.path.dirname(__file__), 'websites.yaml')
     with open(file_path, 'r') as file:
-        config = yaml.safe_load(file)
-    return config['websites']
+        websites = yaml.safe_load(file)
+    return websites
 
 
 def fetch_url(url, retries=3, timeout=20):
