@@ -6,8 +6,14 @@ from urllib3.util.retry import Retry
 
 
 def load_websites_from_yaml():
-    # Construct a relative path to websites.yaml
+    # Check if 'websites.yaml' is in the current or parent directory
     file_path = os.path.join(os.path.dirname(__file__), 'websites.yaml')
+    if not os.path.exists(file_path):
+        # Try finding it in the root directory
+        file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'websites.yaml')
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Cannot find websites.yaml at {file_path}")
+
     with open(file_path, 'r') as file:
         websites = yaml.safe_load(file)
     return websites

@@ -1,20 +1,26 @@
-# test_content_verification.py
 import pytest
-from selenium import webdriver
 from selenium.common import TimeoutException
-from selenium.webdriver.chrome.service import Service as ChromeService
-from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from helpers import load_websites_from_yaml
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service as ChromeService
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.options import Options
 
+def get_chrome_driver():
+    options = Options()
+    options.add_argument("--headless")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    return webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
 
 @pytest.mark.parametrize("url", load_websites_from_yaml())
 def test_content_verification(url):
     """Verify if a search bar element exists on the page."""
-    # Setup Selenium WebDriver
-    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()))
+    # Setup Selenium WebDriver using the get_chrome_driver function
+    driver = get_chrome_driver()
     driver.get(url)
 
     # Set an implicit wait for page elements
