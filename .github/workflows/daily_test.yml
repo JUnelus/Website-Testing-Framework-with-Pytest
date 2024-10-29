@@ -1,6 +1,9 @@
 name: Daily Website Tests
 
 on:
+  push:
+    branches:
+      - main
   schedule:
     - cron: '0 10 * * *' # Runs daily at 1 AM UTC
 
@@ -19,7 +22,8 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install pytest requests beautifulsoup4 pytest-html
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
 
     - name: Run tests
       run: |
