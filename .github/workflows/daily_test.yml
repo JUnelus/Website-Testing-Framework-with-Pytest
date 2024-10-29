@@ -1,0 +1,32 @@
+name: Daily Website Tests
+
+on:
+  schedule:
+    - cron: '0 10 * * *' # Runs daily at 1 AM UTC
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        pip install pytest requests beautifulsoup4 pytest-html
+
+    - name: Run tests
+      run: |
+        pytest --html=report.html --self-contained-html
+
+    - name: Upload test report
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-report
+        path: report.html
