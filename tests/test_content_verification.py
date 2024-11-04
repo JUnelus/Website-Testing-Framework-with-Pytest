@@ -9,6 +9,7 @@ from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
 import logging
+from time import sleep
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -18,64 +19,56 @@ def get_chrome_driver():
     options.add_argument("--headless")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    return webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+    driver.set_page_load_timeout(120)  # Set page load timeout
+    return driver
+
+def locate_element_with_retry(driver, locator, timeout=60, retries=3, delay=5):
+    """Retry locating an element in case of intermittent failures."""
+    for i in range(retries):
+        try:
+            return WebDriverWait(driver, timeout).until(EC.visibility_of_element_located(locator))
+        except TimeoutException:
+            if i < retries - 1:
+                sleep(delay)
+                logging.warning(f"Retry {i + 1}/{retries} for locating element: {locator}")
+            else:
+                raise
 
 @pytest.mark.parametrize("url", load_websites_from_yaml())
 def test_content_verification(url):
-    """Verify if a search bar element exists on the page."""
     driver = get_chrome_driver()
     driver.get(url)
     driver.implicitly_wait(10)
 
     try:
-        timeout_duration = 60  # Adjusted timeout duration
-        search_bar = None
-
+        timeout_duration = 60
         logging.info(f"Testing URL: {url}")
 
-        # Waiting for the page's main content to load before checking for the search bar
         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, 'body')))
 
-        # Specific patterns for known websites
+        # Site-specific locators
         if "amazon" in url:
             try:
-                search_bar = WebDriverWait(driver, timeout_duration).until(
-                    EC.visibility_of_element_located((By.ID, 'twotabsearchtextbox'))
-                )
+                search_bar = locate_element_with_retry(driver, (By.ID, 'twotabsearchtextbox'), timeout_duration)
             except TimeoutException:
                 logging.warning(f"Falling back to generic search selector for Amazon on {url}")
-                search_bar = WebDriverWait(driver, timeout_duration).until(
-                    EC.visibility_of_element_located((By.CSS_SELECTOR, "input[type='search']"))
-                )
+                search_bar = locate_element_with_retry(driver, (By.CSS_SELECTOR, "input[type='search']"), timeout_duration)
 
         elif "bestbuy" in url:
             try:
-                search_bar = WebDriverWait(driver, timeout_duration).until(
-                    EC.visibility_of_element_located((By.CSS_SELECTOR, "input[aria-label*='Search']"))
-                )
+                search_bar = locate_element_with_retry(driver, (By.CSS_SELECTOR, "input[aria-label*='Search']"), timeout_duration)
             except TimeoutException:
                 logging.warning(f"Using broader selector for Best Buy on {url}")
-                search_bar = WebDriverWait(driver, timeout_duration).until(
-                    EC.visibility_of_element_located((By.CSS_SELECTOR, "input[name='search'], input[placeholder*='Search']"))
-                )
+                search_bar = locate_element_with_retry(driver, (By.CSS_SELECTOR, "input[name='search'], input[placeholder*='Search']"), timeout_duration)
 
         elif "kohls" in url:
-            search_bar = WebDriverWait(driver, timeout_duration).until(
-                EC.visibility_of_element_located((By.CSS_SELECTOR, "input[placeholder='Search']"))
-            )
+            search_bar = locate_element_with_retry(driver, (By.CSS_SELECTOR, "input[placeholder='Search']"), timeout_duration)
 
         else:
-            # General pattern for other websites
-            search_bar = WebDriverWait(driver, timeout_duration).until(
-                EC.visibility_of_any_elements_located([
-                    (By.CSS_SELECTOR, "input[type='search']"),
-                    (By.NAME, 'q'),
-                    (By.CSS_SELECTOR, "input[class*='search']"),
-                    (By.CSS_SELECTOR, "input[aria-label*='search']")
-                ])
-            )
+            # General fallback for other sites
+            search_bar = locate_element_with_retry(driver, (By.CSS_SELECTOR, "input[type='search'], input[name='q'], input[class*='search']"), timeout_duration)
 
-        # Assert that the search bar is found and visible
         assert search_bar is not None, f"{url} has no identifiable search bar"
         logging.info(f"Search bar located on {url}")
 

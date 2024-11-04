@@ -1,4 +1,3 @@
-# test_availability.py
 import pytest
 from helpers import load_websites_from_yaml, fetch_url
 
