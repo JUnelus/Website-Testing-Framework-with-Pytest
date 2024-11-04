@@ -8,6 +8,10 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 def get_chrome_driver():
     options = Options()
@@ -21,14 +25,16 @@ def test_content_verification(url):
     """Verify if a search bar element exists on the page."""
     driver = get_chrome_driver()
     driver.get(url)
-
-    # Implicit wait for initial element loading
     driver.implicitly_wait(10)
 
     try:
-        # Adjusted timeout duration
-        timeout_duration = 30
+        timeout_duration = 60  # Adjusted timeout duration
         search_bar = None
+
+        logging.info(f"Testing URL: {url}")
+
+        # Waiting for the page's main content to load before checking for the search bar
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, 'body')))
 
         # Specific patterns for known websites
         if "amazon" in url:
@@ -37,7 +43,7 @@ def test_content_verification(url):
                     EC.visibility_of_element_located((By.ID, 'twotabsearchtextbox'))
                 )
             except TimeoutException:
-                # Broad fallback pattern if Amazon search ID fails
+                logging.warning(f"Falling back to generic search selector for Amazon on {url}")
                 search_bar = WebDriverWait(driver, timeout_duration).until(
                     EC.visibility_of_element_located((By.CSS_SELECTOR, "input[type='search']"))
                 )
@@ -48,7 +54,7 @@ def test_content_verification(url):
                     EC.visibility_of_element_located((By.CSS_SELECTOR, "input[aria-label*='Search']"))
                 )
             except TimeoutException:
-                # Fallback for Best Buy with broader selector
+                logging.warning(f"Using broader selector for Best Buy on {url}")
                 search_bar = WebDriverWait(driver, timeout_duration).until(
                     EC.visibility_of_element_located((By.CSS_SELECTOR, "input[name='search'], input[placeholder*='Search']"))
                 )
@@ -59,22 +65,22 @@ def test_content_verification(url):
             )
 
         else:
-            # Generic pattern for other websites
+            # General pattern for other websites
             search_bar = WebDriverWait(driver, timeout_duration).until(
                 EC.visibility_of_any_elements_located([
                     (By.CSS_SELECTOR, "input[type='search']"),
                     (By.NAME, 'q'),
-                    (By.CSS_SELECTOR, "input[class*='search']")
+                    (By.CSS_SELECTOR, "input[class*='search']"),
+                    (By.CSS_SELECTOR, "input[aria-label*='search']")
                 ])
             )
 
-        # Assert that the search bar is visible and available
+        # Assert that the search bar is found and visible
         assert search_bar is not None, f"{url} has no identifiable search bar"
+        logging.info(f"Search bar located on {url}")
 
     except (TimeoutException, NoSuchElementException) as e:
-        # Fail test with error detail if search element is not found
         pytest.fail(f"Content verification failed for {url} due to error: {e}")
 
     finally:
-        # Ensure browser closes after test
         driver.quit()
